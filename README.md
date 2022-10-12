@@ -1,6 +1,12 @@
 # django-setfield
 Django model field to handle sets (in the python/math sense)
 
+## Installation
+
+```shell
+pip3 install django-setfield
+```
+
 ## Get started
 
 ```python
@@ -32,7 +38,7 @@ class TestModel(models.Model):
 ```
 
 :warning: The parameter `choices` does not create a constraint on the DB side (see [Internals](#internals)). It means that you can change it without migration but the **previous stored values will lose their meaning**.
-The *good* practice is obviously not to modify it but if you really need to add new choices, you must append them to the list.
+The *good* practice is obviously not to modify it but if you really need to add new choices, you must **append** them to the list.
 
 ## Admin
 
@@ -106,7 +112,7 @@ In the creation form, a multi-checkbox widget is used to select among the availa
 
 ## DRF
 
-[DRF](https://www.django-rest-framework.org/) supports `SetField` through the `MultipleChoiceField` (but currently you must to pass the choices manually)
+[DRF](https://www.django-rest-framework.org/) supports `SetField` through the `MultipleChoiceField` (but currently you must pass the choices manually)
 
 ```python
 from rest_framework import serializers

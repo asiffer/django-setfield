@@ -1,4 +1,4 @@
-from typing import Any, Iterable, Set, Union
+from typing import Any, Iterable, List, Set, Union
 
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -25,17 +25,17 @@ class NoFlatchoicesPropertyMixin:
 
 class SetField(NoFlatchoicesPropertyMixin, models.PositiveBigIntegerField):
     description: str = _("Multiple value selection within a set")
-    _choices: Set[Any]
+    _choices: List[Any]
     _default: Set[Any]
 
     def __init__(
         self,
         *args: Any,
-        choices: Iterable[Any] = set(),
+        choices: List[Any] = [],
         default: Union[int, Iterable[Any]] = set(),
         **kwargs: Any,
     ) -> None:
-        self._choices = set(choices)
+        self._choices = list(choices)
         # if we pass the value as an int, we first convert it
         # to a set of choices
         if isinstance(default, int):
