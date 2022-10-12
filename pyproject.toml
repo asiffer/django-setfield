@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "django-set-field"
+version = "0.1.0"
+description = "Django model field to handle sets (in the python/math sense)"
+authors = ["Alban Siffer <alban.siffer@irisa.fr>"]
+license = "MIT"
+packages = [{include = "django_set_field"}]
+
+[tool.poetry.dependencies]
+python = ">=3.8"
+Django = "^4.1.2"
+djangorestframework = "^3.14.0"
+
+[tool.poetry.dev-dependencies]
+django-extensions = "^3.2.1"
+ipython = "^8.5.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

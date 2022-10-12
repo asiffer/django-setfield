@@ -127,3 +127,14 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# custom
+.vscode
+.dev
+
+# https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
+poetry.lock
+
+# test
+Makefile
+test_app
