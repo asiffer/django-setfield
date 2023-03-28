@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-setfield"
-version = "0.1.1"
+version = "0.2.0"
 description = "Django model field to handle sets (in the python/math sense)"
 authors = ["Alban Siffer <alban.siffer@irisa.fr>"]
 license = "MIT"
