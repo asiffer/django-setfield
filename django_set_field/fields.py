@@ -148,5 +148,13 @@ class SetField(NoFlatchoicesPropertyMixin, models.PositiveBigIntegerField):
     def get_default(self) -> Any:
         return self._default
 
+    def value_to_string(self, obj: Any) -> List[Any]:
+        """This method is called to serialiaze a field. In particular this is used
+        while dumping data (creating fixture from db records). In the setfield
+        case, one must return a list.
+        """
+        value: Set[Any] = self.value_from_object(obj)
+        return list(value)
+
 
 DebugSetField = hook_class(SetField)
