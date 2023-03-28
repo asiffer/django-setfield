@@ -1,4 +1,8 @@
 # django-setfield
+[![Build](https://github.com/asiffer/django-setfield/actions/workflows/build.yaml/badge.svg)](https://github.com/asiffer/django-setfield/actions/workflows/build.yaml)
+[![Publish](https://github.com/asiffer/django-setfield/actions/workflows/publish.yaml/badge.svg)](https://github.com/asiffer/django-setfield/actions/workflows/publish.yaml)
+[![PyPI version](https://badge.fury.io/py/django-setfield.svg)](https://badge.fury.io/py/django-setfield)
+
 Django model field to handle sets (in the python/math sense)
 
 ## Installation
