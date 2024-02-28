@@ -1,14 +1,18 @@
 # django-setfield
+
 [![Build](https://github.com/asiffer/django-setfield/actions/workflows/build.yaml/badge.svg)](https://github.com/asiffer/django-setfield/actions/workflows/build.yaml)
 [![Publish](https://github.com/asiffer/django-setfield/actions/workflows/publish.yaml/badge.svg)](https://github.com/asiffer/django-setfield/actions/workflows/publish.yaml)
 [![PyPI version](https://badge.fury.io/py/django-setfield.svg)](https://badge.fury.io/py/django-setfield)
 
 Django model field to handle sets (in the python/math sense)
 
+> [!CAUTION]
+> Since version `0.3.0` the "choices" must be passed through the `options` keyword.
+
 ## Installation
 
 ```shell
-pip3 install django-setfield
+pip install django-setfield
 ```
 
 ## Get started
@@ -19,9 +23,9 @@ from django_set_field.fields import SetField
 
 
 class TestModel(models.Model):
-    CHOICES = ["TOMTOM", "NANA"]
+    OPTIONS = ["TOMTOM", "NANA"]
 
-    tags = SetField(choices=CHOICES)
+    tags = SetField(options=OPTIONS)
 ```
 
 Now you can manipulate the field like a python set
@@ -36,25 +40,35 @@ The default value for the `SetField` is the empty set (you do not have to declar
 
 ```python
 class TestModel(models.Model):
-    CHOICES = ["TOMTOM", "NANA"]
+    OPTIONS = ["TOMTOM", "NANA"]
 
-    tags = SetField(choices=CHOICES, default={"NANA"})
+    tags = SetField(options=OPTIONS, default={"NANA"})
 ```
 
-:warning: The parameter `choices` does not create a constraint on the DB side (see [Internals](#internals)). It means that you can change it without migration but the **previous stored values will lose their meaning**.
-The *good* practice is obviously not to modify it but if you really need to add new choices, you must **append** them to the list.
+> [!WARNING]
+> The parameter `options` does not create a constraint on the DB side (see [Internals](#internals)). It means that you can change it without migration but the **previous stored values will lose their meaning**. The _good_ practice is obviously not to modify it but if you really need to add new option, you must **append** them to the list.
+
+## Querying
+
+The package provides a custom lookup `__includes` that performs a subset query.
+
+```python
+# find all the objects such that 'tags ⊇ {"TOMTOM"}'
+TestModel.objects.filter(tags__includes={"TOMTOM"})
+```
 
 ## Admin
 
-Models with `SetField` can be registered in the admin panel.
+Models with `SetField` can be registered in the admin panel. We also recommend to use the dedicated `SetFieldFilter` if you want to filter on the field.
 
 ```python
 from django.contrib import admin
-
+from django_set_field.admin import SetFieldFilter
 from app.models import TestModel
 
 class TestModelAdmin(admin.ModelAdmin):
     list_display = ["id", "tags"]
+    list_filter = [("tags", SetFieldFilter)]
 
 admin.site.register(TestModel, TestModelAdmin)
 ```
@@ -64,15 +78,19 @@ The `SetField` is currently "displayable" as a raw string.
 ![admin model list](assets/django_admin_list_display.png)
 
 You can modify this behaviour by referencing a method in the admin model
+
 ```python
 class TestModelAdmin(admin.ModelAdmin):
     list_display = ["id", "get_tags"]
+    # you can display the filter
+    list_filter = [("tags", SetFieldFilter)]
 
     def get_tags(self, obj: TestModel) -> str:
         return "+".join(sorted(obj.tags))
-    
+
     get_tags.short_description = "tags"
 ```
+
 You can even provide a fancier result by returning html
 
 ```python
@@ -84,6 +102,7 @@ def to_css(d: dict):
 
 class TestModelAdmin(admin.ModelAdmin):
     list_display = ["id", "get_tags"]
+    list_filter = [("tags", SetFieldFilter)]
 
     def get_tags(self, obj: TestModel) -> str:
         base_style = {
@@ -107,12 +126,9 @@ class TestModelAdmin(admin.ModelAdmin):
 
 ![admin fancy list display](assets/django_admin_list_display_fancy.png)
 
-Currently the `list_filter` option is not supported (empty filter in the panel). In practice, we may imagine to filter results that have a certain element in the `SetField` (a certain tag in our example). But the default admin list filter performs an [`__exact` lookup](https://docs.djangoproject.com/en/4.1/ref/models/querysets/#exact). So the filter keeps only the records that exactly have a set with the selected element. Ideally, the filter should perform a [`__contains` lookup](https://docs.djangoproject.com/en/4.1/ref/models/querysets/#std-fieldlookup-contains).
-
-In the creation form, a multi-checkbox widget is used to select among the available choices.
+In the creation form, a multi-checkbox widget is used to select among the available options.
 
 ![admin form create](assets/django_admin_create_form.png)
-
 
 ## DRF
 
@@ -124,17 +140,33 @@ from rest_framework import serializers
 from .models import TestModel
 
 class TestSerializer(serializers.ModelSerializer):
-    tags = serializers.MultipleChoiceField(choices=TestModel.CHOICES)
-    
+    tags = serializers.MultipleChoiceField(choices=TestModel.OPTIONS)
+
     class Meta:
         model = TestModel
         fields = ["tags"]
         read_only_fields = ["id"]
 ```
 
+## Testing
+
+After local installation, you can run the tests with the `runtests.py` dedicated command.
+
+```shell
+poetry install
+poetry run ./runtests.py
+```
+
+If you want to interact with simple example, and explore the admin panel:
+
+```shell
+poetry run ./rundev.py
+# You can visit http://127.0.0.1:8000/admin/ - default credentials: admin/admin
+```
+
 ## Internals
 
-The strategy to implement such a field is merely to use the bits of an integer. Thus, a `SetField` is a `PositiveBigIntegerField`. As an example, with `choices=["TOMTOM", "NANA"]` we have
+The strategy to implement such a field is merely to use the bits of an integer. Thus, a `SetField` is a `PositiveBigIntegerField`. As an example, with `options=["TOMTOM", "NANA"]` we have
 
 | Set                  | Binary | Integer |
 | -------------------- | ------ | ------- |
@@ -143,4 +175,4 @@ The strategy to implement such a field is merely to use the bits of an integer. 
 | `{"NANA"}`           | `0b10` | `2`     |
 | `{"TOMTOM", "NANA"}` | `0b11` | `3`     |
 
-The order of the choices is then very important to keep your logic coherent. You should not change it if some records are stored in DB.
+The order of the options is then very important to keep your logic coherent. You should not change it if some records are stored in DB.

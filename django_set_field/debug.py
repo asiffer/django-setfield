@@ -3,6 +3,9 @@ import logging
 from functools import wraps
 from typing import Callable
 
+
+from .fields import SetField
+
 log = logging.getLogger(__file__)
 log.setLevel(logging.DEBUG)
 # create console handler and set level to debug
@@ -61,3 +64,6 @@ def hook_class(cls: type) -> type:
         setattr(HookedClass, method_name, hook_method(method))
 
     return HookedClass
+
+
+DebugSetField = hook_class(SetField)
