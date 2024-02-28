@@ -9,7 +9,7 @@ env:
   POETRY_VERSION: "1.4.1"
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
