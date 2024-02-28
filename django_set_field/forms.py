@@ -15,4 +15,5 @@ class TypedMultipleChoiceField(forms.TypedMultipleChoiceField):
         return initial != data
 
     def valid_value(self, value: str):
+        print("VALUE:", value, self.choices)
         return (value, value) in self.choices

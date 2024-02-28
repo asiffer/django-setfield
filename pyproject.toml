@@ -1,24 +1,23 @@
 [tool.poetry]
 name = "django-setfield"
-version = "0.2.0"
+version = "0.3.0"
 description = "Django model field to handle sets (in the python/math sense)"
 authors = ["Alban Siffer <alban.siffer@irisa.fr>"]
 license = "MIT"
 packages = [{ include = "django_set_field" }]
 
 [tool.poetry.dependencies]
-python = ">=3.8"
-Django = "^4.1.2"
-djangorestframework = "^3.14.0"
+python = ">=3.10"
+Django = "^5"
 
-[tool.poetry.dev-dependencies]
-django-extensions = "^3.2.1"
-ipython = "^8.5.0"
 
 [tool.poetry.group.dev.dependencies]
+django-extensions = "^3.2.1"
+ipython = "^8.5.0"
 black = "^23.1.0"
 pylint = "^2.17.1"
 pylint-django = "^2.5.3"
+django-stubs = {extras = ["compatible-mypy"], version = "^4.2.7"}
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
