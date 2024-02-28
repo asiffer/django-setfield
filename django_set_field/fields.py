@@ -1,12 +1,12 @@
 from typing import Any, Iterable, List, Set, Union
 
+from django import forms
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils.translation import gettext_lazy as _
+from django.db.models import Lookup
+from django.utils.translation import gettext as _
 
-from django_set_field.debug import hook_class
 from django_set_field.forms import TypedMultipleChoiceField
-from django_set_field.widgets import MultiCheckbox
 
 
 class NoFlatchoicesPropertyMixin:
@@ -23,55 +23,49 @@ class NoFlatchoicesPropertyMixin:
         return []
 
 
-class SetField(NoFlatchoicesPropertyMixin, models.PositiveBigIntegerField):
+class SetField(NoFlatchoicesPropertyMixin, models.Field):
     description: str = _("Multiple value selection within a set")
-    _choices: List[Any]
+    _options: List[Any]
     _default: Set[Any]
 
     def __init__(
         self,
         *args: Any,
-        choices: List[Any] = [],
-        default: Union[int, Iterable[Any]] = set(),
+        options: List[Any],
         **kwargs: Any,
     ) -> None:
-        self._choices = list(choices)
-        # if we pass the value as an int, we first convert it
-        # to a set of choices
-        if isinstance(default, int):
-            default = self.int_to_choices(default)
-        self._default = set(default)
+        self._options = list(options)
+        default = kwargs.get("default", [])
+        if default in self._options:
+            self._default = {default}
+        else:
+            self._default = set(default)
 
-        assert self._default.issubset(
-            self._choices
-        ), "the default set must be a subset of choices"
-        # turn choice into django common 'choices' argument
-        django_choices = [
-            (f"{c}", f"{c}") for k, c in enumerate(self._choices)
+        kwargs.pop("choices", None)
+
+        self.choices = [
+            (k, frozenset(self.int_to_choices(k)))
+            for k in range(0, pow(2, len(self._options)))
         ]
-        super().__init__(
-            *args,
-            choices=django_choices,
-            default=self.choices_to_int(self._default),
-            **kwargs,
-        )
+        super().__init__(*args, **kwargs)
+
+    def get_internal_type(self):
+        return "PositiveBigIntegerField"
 
     def choices_to_int(self, choices: Union[int, Iterable[Any]]) -> int:
         """Converts a set into the corresponding integer"""
         if isinstance(choices, int):
             return choices
-        return sum(
-            (1 << k) for k, c in enumerate(self._choices) if c in choices
-        )
+        return sum((1 << k) for k, c in enumerate(self._options) if c in choices)
 
     def int_to_choices(self, n: int) -> Iterable[Any]:
         """Convert an integer into the corresponding set"""
-        return set(c for k, c in enumerate(self._choices) if n & (1 << k))
+        return set(c for k, c in enumerate(self._options) if n & (1 << k))
 
     def deconstruct(self) -> Any:
         """ """
         name, path, args, kwargs = super().deconstruct()
-        kwargs["choices"] = self._choices
+        kwargs["options"] = self._options
         kwargs["default"] = self._default
         return name, path, args, kwargs
 
@@ -120,19 +114,18 @@ class SetField(NoFlatchoicesPropertyMixin, models.PositiveBigIntegerField):
 
     def formfield(self, **kwargs):
         defaults = {
-            "form_class": None,
-            "choices_form_class": TypedMultipleChoiceField,
-            "coerce": str,
-            "widget": MultiCheckbox,
+            "form_class": TypedMultipleChoiceField,
+            "choices": [(f"{o}", f"{o}") for o in self._options],
+            "widget": forms.CheckboxSelectMultiple,
             "required": False,
         }
         kwargs.update(defaults)
         return super().formfield(**kwargs)
 
-    def validate(self, value: set, model_instance: models.Model) -> None:
-        if not value.issubset(self._choices):
+    def validate(self, value: set, model_instance: models.Model | None) -> None:
+        if not value.issubset(self._options):
             raise ValidationError(
-                _(f"Value {value} is not a subset of {self._choices}")
+                _(f"Value {value} is not a subset of {self._options}")
             )
 
     def pre_save(self, model_instance: models.Model, add: bool) -> Any:
@@ -148,7 +141,7 @@ class SetField(NoFlatchoicesPropertyMixin, models.PositiveBigIntegerField):
     def get_default(self) -> Any:
         return self._default
 
-    def value_to_string(self, obj: Any) -> List[Any]:
+    def value_to_string(self, obj: Any) -> List[Any]:  # type:ignore
         """This method is called to serialiaze a field. In particular this is used
         while dumping data (creating fixture from db records). In the setfield
         case, one must return a list.
@@ -157,4 +150,14 @@ class SetField(NoFlatchoicesPropertyMixin, models.PositiveBigIntegerField):
         return list(value)
 
 
-DebugSetField = hook_class(SetField)
+class Includes(Lookup):
+    lookup_name = "includes"
+
+    def as_sql(self, compiler, connection):
+        lhs, lhs_params = self.process_lhs(compiler, connection)
+        rhs, rhs_params = self.process_rhs(compiler, connection)
+        params = lhs_params + rhs_params
+        return f"({lhs} & {rhs})", params
+
+
+SetField.register_lookup(Includes)
